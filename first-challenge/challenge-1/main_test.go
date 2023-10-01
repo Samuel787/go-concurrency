@@ -6,7 +6,6 @@ import (
 	"strings"
 	"testing"
 	"sync"
-	"fmt"
 )
 
 func Test_updateMessage(t *testing.T) {
@@ -58,7 +57,8 @@ func Test_main(t *testing.T) {
 
 	os.Stdout = stdOut
 
-	fmt.Printf("This is the output %s: ", output)
+	// have to run with $ go test -v .
+	t.Logf("This is the output %s: ", output)
 
 	if !strings.Contains(output, "Hello, universe!") {
 		t.Errorf("Expected to find Hello, universe!")
