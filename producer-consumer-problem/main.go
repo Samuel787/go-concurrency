@@ -32,13 +32,13 @@ func (p *Producer) Close() error {
 func makePizza(pizzaNumber int) *PizzaOrder {
 	pizzaNumber++
 	if pizzaNumber <= NumberOfPizzas {
-		delay := rand.Intn(5) + 1
+		delay := rand.Intn(2) + 1
 		fmt.Printf("Received order #%d!", pizzaNumber)
 
-		rnd := rand.Intn(12) + 1
 		msg := ""
 		success := false
 
+		rnd := rand.Intn(12) + 1
 		if rnd < 5 {
 			pizzasFailed++
 		} else {
@@ -47,7 +47,7 @@ func makePizza(pizzaNumber int) *PizzaOrder {
 
 		total++
 
-		fmt.Printf("Making pizza %d. It will take % seconds....\n", pizzaNumber, delay)
+		fmt.Printf("Making pizza %d. It will take %d seconds....\n", pizzaNumber, delay)
 		// delay a bit
 		time.Sleep(time.Duration(delay) * time.Second)
 
@@ -84,8 +84,20 @@ func pizzaria(pizzaMaker *Producer) {
 	for {
 		currentPizza := makePizza(i)
 		// try to make pizza
-	
-		// decision
+		if currentPizza != nil {
+			i = currentPizza.pizzaNumber
+			select {
+			// we tried to make a pizza (we sent something to the data channel)
+			case pizzaMaker.data <- *currentPizza:
+
+			// we want to quit, so send pizzaMaker.quit to the quitChan (a chan error)
+			case quitChan := <- pizzaMaker.quit:
+				// close channels
+				close(pizzaMaker.data)
+				close(quitChan)
+				return
+			}
+		}
 	}
 
 }
@@ -108,6 +120,40 @@ func main() {
 	go pizzaria(pizzaJob)
 
 	// create and run consumer
+	for i := range pizzaJob.data {
+		if i.pizzaNumber <= NumberOfPizzas {
+			if i.success {
+				color.Green(i.message)
+				color.Green("Order #%d is out for delivery!", i.pizzaNumber)
+			} else {
+				color.Red(i.message)
+				color.Red("The customer is really mad!")
+			}
+		} else {
+			color.Cyan("Done making pizzas...")
+			err := pizzaJob.Close()
+			if err != nil {
+				color.Red("**** Error closing channel!", err)
+			}
+		}
+	}
 
 	// print out the ending message
+	color.Cyan("------------------")
+	color.Cyan("Done for the day.")
+
+	color.Cyan("We made %d pizzas, but failed to make %d, with %d attempts in total.", pizzasMade, pizzasFailed, total)
+
+	switch {
+	case pizzasFailed > 9:
+		color.Red("It was an aweful day...")
+	case pizzasFailed >= 6:
+		color.Red("It was not a very good day...")
+	case pizzasFailed >= 4:
+		color.Yellow("It was an okay day....")
+	case pizzasFailed >= 2:
+		color.Yellow("It was a pretty good day!")
+	default:
+		color.Green("It was a great day!")
+	}
 }
