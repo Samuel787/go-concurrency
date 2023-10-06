@@ -93,6 +93,7 @@ func pizzaria(pizzaMaker *Producer) {
 			// we want to quit, so send pizzaMaker.quit to the quitChan (a chan error)
 			case quitChan := <- pizzaMaker.quit:
 				// close channels
+				color.Blue("~~~pizzaMaker quit was called!~~~")
 				close(pizzaMaker.data)
 				close(quitChan)
 				return
